@@ -6,17 +6,15 @@ import (
 	"log"
 	"net"
 	"os"
-	"strings"
 )
 
-const version string = "0.1"
+const version string = "0.1-rob-deutsch"
 
 var (
-	listenAddress     = flag.String("listen-address", ":9999", "UDP port to listen for incoming packets")
-	receiverAddresses = flag.String("receivers", "", "comma seperated list of copy receivers")
-	bufferSize        = flag.Int("buffer-size", 1024, "size of read buffer")
-	debug             = flag.Bool("debug", false, "debug mode")
-	showVersion       = flag.Bool("version", false, "show version info")
+	listenAddress = flag.String("listen-address", ":9999", "UDP port to listen for incoming packets")
+	bufferSize    = flag.Int("buffer-size", 1024, "size of read buffer")
+	debug         = flag.Bool("debug", false, "debug mode")
+	showVersion   = flag.Bool("version", false, "show version info")
 )
 
 type receiver struct {
@@ -39,28 +37,17 @@ func main() {
 		os.Exit(0)
 	}
 
-	if len(*receiverAddresses) == 0 {
-		fmt.Println("No receivers defined!")
-		os.Exit(1)
-	}
-
-	receivers := getReceivers()
-
-	for _, r := range receivers {
-		go startReceiverWorker(r)
-	}
-
-	startServer(receivers)
+	startServer()
 }
 
 func printVersion() {
 	fmt.Println("udp-mirror")
 	fmt.Printf("Version: %s\n", version)
-	fmt.Println("Author: Daniel Czerwonk")
-	fmt.Println("Source code: https://github.com/czerwonk/udp-mirror")
+	fmt.Println("Author: Rob Deutsch (original author Daniel Czerwonk)")
+	fmt.Println("Source code: https://github.com/rob-deutsch/udp-mirror")
 }
 
-func startServer(receivers []*receiver) {
+func startServer() {
 	log.Println("Starting listening")
 	conn, err := net.ListenPacket("udp", *listenAddress)
 	if err != nil {
@@ -72,7 +59,7 @@ func startServer(receivers []*receiver) {
 
 	for {
 		buf := make([]byte, *bufferSize)
-		len, _, err := conn.ReadFrom(buf)
+		len, addr, err := conn.ReadFrom(buf)
 		if err != nil {
 			log.Println(err)
 		}
@@ -81,44 +68,6 @@ func startServer(receivers []*receiver) {
 			log.Printf("Received (%d)", len)
 		}
 
-		go func() {
-			for _, r := range receivers {
-				r.channel <- buf[:len]
-			}
-		}()
-	}
-}
-
-func getReceivers() []*receiver {
-	receivers := make([]*receiver, 0)
-
-	for _, x := range strings.Split(*receiverAddresses, ",") {
-		r := &receiver{address: strings.TrimSpace(x), channel: make(chan []byte)}
-		receivers = append(receivers, r)
-	}
-
-	return receivers
-}
-
-func startReceiverWorker(r *receiver) {
-	conn, err := net.Dial("udp", r.address)
-	if err != nil {
-		log.Println("Could not connect to receiver %s: %s", r.address, err)
-		return
-	}
-	defer conn.Close()
-
-	log.Printf("Adding receiver: %s\n", r.address)
-
-	for {
-		d := <-r.channel
-		_, err := conn.Write(d)
-		if err != nil {
-			log.Printf("%s: %s", r.address, err)
-		}
-
-		if *debug {
-			log.Printf("Packet sent to %s (%d)", r.address, len(d))
-		}
+		conn.WriteTo(buf[:len], addr)
 	}
 }

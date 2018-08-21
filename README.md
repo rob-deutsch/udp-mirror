@@ -1,20 +1,21 @@
-# udp-mirror [![Build Status](https://travis-ci.org/czerwonk/udp-mirror.svg)][travis]
-Listens for UDP packets an sends copies to multiple receivers
+# udp-mirror
+Listens for UDP packets and echos them back
+
+Original: https://github.com/czerwonk/udp-mirror
 
 # Install
 ```
-go get -u github.com/czerwonk/udp-mirror
+go get -u github.com/rob-deutsch/udp-mirror
 ```
 # Application
-This tool is helpful if you want to use more than one netflow analysis tool at the same time.
+This tool is helpful as a UDP endpoint
 
 # Use
-In this example we want to listen for packets on port 4560. Each packet received should be mirrored and sent to 192.168.1.1:1234 and 192.168.1.2:3456 
+In this example we want to listen for packets on port 4560, and each will be echoed back.
 ```
-udp-mirror -listen-address ":4560" -receivers "192.168.1.1:1234,192.168.1.2:3456"
+udp-mirror -listen-address ":4560"
 ```
 ## Docker
 ```
-docker run -it -p 4560:9999 czerwonk/udp-mirror "192.168.1.1:1234,192.168.1.2:3456"
+docker run -it -p 4560:9999 rob-deutsch/udp-mirror
 ```
-[travis]: https://travis-ci.org/czerwonk/udp-mirror
